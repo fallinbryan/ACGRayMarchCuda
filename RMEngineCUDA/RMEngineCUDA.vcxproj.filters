@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="cutils.cu">
+      <Filter>SourceFiles</Filter>
+    </CudaCompile>
+    <CudaCompile Include="main.cu">
+      <Filter>SourceFiles</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Camera.cu">
+      <Filter>SourceFiles</Filter>
+    </CudaCompile>
+    <CudaCompile Include="RayMarching.cu">
+      <Filter>SourceFiles</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Octree.cpp">
+      <Filter>SourceFiles</Filter>
+    </ClCompile>
+    <ClCompile Include="GLUtil.cpp">
+      <Filter>SourceFiles</Filter>
+    </ClCompile>
+    <ClCompile Include="glad.c">
+      <Filter>SourceFiles</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="basicFragShader.glsl">
+      <Filter>ShaderFiles</Filter>
+    </None>
+    <None Include="basicVertShader.glsl">
+      <Filter>ShaderFiles</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Camera.cuh">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="cutils.cuh">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="GLUtil.h">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Octree.h">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderable.h">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="RayMarching.cuh">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="SourceFiles">
+      <UniqueIdentifier>{10948f47-8280-401a-893e-12e131cb686d}</UniqueIdentifier>
+      <Extensions>cpp;cu</Extensions>
+    </Filter>
+    <Filter Include="HeaderFiles">
+      <UniqueIdentifier>{70dc52d0-bc3e-4d47-940e-ba69505167e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ShaderFiles">
+      <UniqueIdentifier>{181ba051-3810-4022-b3c5-512cfd0aeab0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
