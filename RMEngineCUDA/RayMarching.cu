@@ -45,6 +45,7 @@ __global__ void raymarch::computeRayMarchedColorsKernel(unsigned char* pixelBuff
     bgColor.g = raymarch::map(testRay.direction.y, -1.0f, 1.0f, 0.0f, 1.0f);
     bgColor.b = raymarch::map(testRay.direction.z, -1.0f, 1.0f, 0.0f, 1.0f);
     marchingOrders.bgColor = bgColor;
+
     if (raymarch::isRayInOctreeBounds(testRay, marchingOrders.octree, marchingOrders.octreeSize, debug))
     {
 
@@ -64,7 +65,7 @@ __global__ void raymarch::computeRayMarchedColorsKernel(unsigned char* pixelBuff
           bgColor.b = raymarch::map(ray.direction.z, -1.0f, 1.0f, 0.0f, 1.0f);
           //bgColor.a = 255;
             marchingOrders.bgColor = bgColor;
-            colorvec = raymarch::computeColorFromRay(ray, marchingOrders);
+            colorvec = raymarch::computeColorFromHitInfo(rayId, marchingOrders);
             sumColor += colorvec;
             
 
@@ -91,7 +92,7 @@ __global__ void raymarch::computeRayMarchedColorsKernel(unsigned char* pixelBuff
     marchingOrders.bgColor = bgColor;
     if (raymarch::isRayInOctreeBounds(ray, marchingOrders.octree, marchingOrders.octreeSize, debug))
     {
-      vRenderColor = raymarch::computeColorFromRay(ray, marchingOrders);
+      vRenderColor = raymarch::computeColorFromHitInfo(rayId, marchingOrders);
 
       //if(vRenderColor != glm::vec3(0) && vRenderColor != bgColor)
       //{
@@ -188,6 +189,34 @@ __global__ void raymarch::initRandState(curandState* randState, size_t seed) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curand_init(seed, id, 0, &randState[id]);
 }
+
+__global__ void raymarch::updateHitBufferKernel(const MarchingOrders marchingOrders) {
+  int x = threadIdx.x + blockIdx.x * blockDim.x;
+  int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+  if (x >= marchingOrders.width || y >= marchingOrders.height) return;
+  hitInfo* hitBuffer = marchingOrders.hitBuffer;
+  raymarch::Ray* rays = marchingOrders.rays;
+
+  if(marchingOrders.withAntiAliasing) {
+    for (int i = 0; i < marchingOrders.sqrtSamplesPerPixel; i++) {
+      for (int j = 0; j < marchingOrders.sqrtSamplesPerPixel; j++) {
+        int rayId = (y * marchingOrders.width + x) * marchingOrders.sqrtSamplesPerPixel * marchingOrders.sqrtSamplesPerPixel + i * marchingOrders.sqrtSamplesPerPixel + j;
+        hitBuffer[rayId] = raymarch::computeHitInfo(rays[rayId], marchingOrders, false);
+      }
+    }
+  }
+  else {
+    int rayId = (y * marchingOrders.width + x);
+    hitBuffer[rayId] = raymarch::computeHitInfo(rays[rayId], marchingOrders, false);
+
+  }
+ 
+   
+
+
+}
+
 #pragma endregion
 
 #pragma region RAYMARCH DEVICE FUNCTIONS
@@ -240,14 +269,21 @@ __device__ void raymarch::calculateDOFRay(Ray& ray, float pixelX, float pixelY, 
 }
 
 
-__device__ raymarch::hitInfo raymarch::computeHitInfo(const Ray& ray, const MarchingOrders& marchingOrders) {
+__device__ raymarch::hitInfo raymarch::computeHitInfo(const Ray& ray, const MarchingOrders& marchingOrders, bool debug) {
 
  ////printf("computing hit info for ray: %f, %f\n", ray.x, ray.y);
+
+  
 
   raymarch::Renderable hitObject;
   raymarch::hitInfo hi;
   hi.hit = false;
   glm::vec3 checkPoint = ray.origin;
+
+  if(!isRayInOctreeBounds(ray, marchingOrders.octree, marchingOrders.octreeSize, debug))
+  {
+    return hi;
+  }
 
   float maxDistance = 100.0f;
   float totalDistance = 0.0f;
@@ -289,14 +325,16 @@ __device__ glm::vec3 raymarch::computeColorFromRay(Ray& ray, const MarchingOrder
   color.g = marchingOrders.bgColor.g;
   color.b = marchingOrders.bgColor.b;
 
-  hitInfo hit = raymarch::computeHitInfo(ray, marchingOrders);
+  
+
+  hitInfo hit = raymarch::computeHitInfo(ray, marchingOrders, false);
   if(!hit.hit) return color;
   //color = raymarch::accumulateLightBounce(hit, marchingOrders, 0);
   float shadowFactor = 1.0f;
   bouncRay.direction = raymarch::getLightDirection(marchingOrders.lights[0], hit.hitPoint);
   bouncRay.origin = hit.hitPoint + hit.normal * epsilon;
   perturbRayDirection(bouncRay, marchingOrders.randState, PI/2.0f);
-  raymarch::hitInfo bouncHit = raymarch::computeHitInfo(bouncRay, marchingOrders);
+  raymarch::hitInfo bouncHit = raymarch::computeHitInfo(bouncRay, marchingOrders, true);
   if (bouncHit.hit)
   {
     shadowFactor = 0.5f;
@@ -307,6 +345,45 @@ __device__ glm::vec3 raymarch::computeColorFromRay(Ray& ray, const MarchingOrder
 
 
   return color * shadowFactor;
+}
+
+__device__ glm::vec3 raymarch::computeColorFromHitInfo(int hitIndex, const MarchingOrders& marchingOrders) {
+
+  glm::vec3 color;
+  raymarch::Ray bouncRay;
+  float epsilon = 0.0001f;
+  color.r = marchingOrders.bgColor.r;
+  color.g = marchingOrders.bgColor.g;
+  color.b = marchingOrders.bgColor.b;
+  hitInfo hit = marchingOrders.hitBuffer[hitIndex];
+
+  int x = threadIdx.x + blockIdx.x * blockDim.x;
+  int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+  bool debug = false;
+  //if (x == 353 && y == 396) {
+  //  printf("entering debug mode\n");
+  //  debug = true;
+  //}
+
+  if (!hit.hit) return color;
+  //color = raymarch::accumulateLightBounce(hit, marchingOrders, 0);
+  float shadowFactor = 1.0f;
+  bouncRay.direction = raymarch::getLightDirection(marchingOrders.lights[0], hit.hitPoint);
+  bouncRay.origin = hit.hitPoint + hit.normal * epsilon;
+  perturbRayDirection(bouncRay, marchingOrders.randState, PI / 2.0f);
+  raymarch::hitInfo bouncHit = raymarch::computeHitInfo(bouncRay, marchingOrders, false);
+  if (bouncHit.hit)
+  {
+    shadowFactor = 0.5f;
+  };
+  color = raymarch::calculatePhongShading(hit, marchingOrders.lights[0]);
+
+
+
+
+  return color * shadowFactor;
+
 }
 
 __device__ glm::vec3 raymarch::accumulateLightBounce(hitInfo hit, const MarchingOrders& marchingOrders, int depth)
@@ -388,11 +465,11 @@ __device__ bool raymarch::isRayInOctreeBounds(const Ray& ray, const OctreeNode* 
     bool hitChild = false;
     /// i have  set a debug pixel that I know should hit an object, but it is not hitting the object
     if (debug) {
-     //printf("node bounds: %f, %f, %f\n", node.bounds.halfExtents.x, node.bounds.halfExtents.y, node.bounds.halfExtents.z);
-     //printf("node position: %f, %f, %f\n", node.bounds.origin.x, node.bounds.origin.y, node.bounds.origin.z);
-     //printf("node idx: %d\n", node.nodeIdx);
-     //printf("node is leaf: %d\n", raymarch::isNodeLeaf(node, debug) ? 1 : 0);
-     //printf("node has data: %d\n", node.containsData ? 1 : 0);
+     printf("node bounds: %f, %f, %f\n", node.bounds.halfExtents.x, node.bounds.halfExtents.y, node.bounds.halfExtents.z);
+     printf("node position: %f, %f, %f\n", node.bounds.origin.x, node.bounds.origin.y, node.bounds.origin.z);
+     printf("node idx: %d\n", node.nodeIdx);
+     printf("node is leaf: %d\n", raymarch::isNodeLeaf(node, debug) ? 1 : 0);
+     printf("node has data: %d\n", node.containsData ? 1 : 0);
     }
     
     for (int i = 0; i < 8; i++) 
@@ -420,8 +497,8 @@ __device__ bool raymarch::isRayInOctreeBounds(const Ray& ray, const OctreeNode* 
          
           if (debug) 
           {
-           //printf("hit child\n");
-           //printf("child is node leaf: %d\n", raymarch::isNodeLeaf(child, debug) ? 1 : 0);
+           printf("hit child\n");
+           printf("child is node leaf: %d\n", raymarch::isNodeLeaf(child, debug) ? 1 : 0);
           }
           
           break;
@@ -432,7 +509,7 @@ __device__ bool raymarch::isRayInOctreeBounds(const Ray& ray, const OctreeNode* 
       if(debug) printf("Parent.childIdx %d is -1, no child was added\n", i);
     }
     if (!hitChild) {
-      if (debug)//printf("did not hit any child, leaving the loop as no hit to octree\n");
+      if (debug) printf("did not hit any child, leaving the loop as no hit to octree\n");
       return false;
     }
   }

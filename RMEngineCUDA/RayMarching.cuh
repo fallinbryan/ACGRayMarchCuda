@@ -32,6 +32,7 @@ namespace raymarch {
   struct MarchingOrders {
     Camera* camera;
     Ray* rays;
+    hitInfo* hitBuffer;
     Renderable* scene;
     Light* lights;
     OctreeNode* octree;
@@ -54,7 +55,9 @@ namespace raymarch {
   __device__ void calculateDOFRay(Ray& ray, float u, float v, curandState* state, const MarchingOrders& orders);
   __device__ glm::vec3 computeColorFromRay(Ray& ray, const MarchingOrders& marchingOrders);
 
-  __device__ hitInfo computeHitInfo(const Ray& ray, const MarchingOrders& marchingOrders);
+  __device__ glm::vec3 computeColorFromHitInfo(int hitIndex, const MarchingOrders& marchingOrders);
+
+  __device__ hitInfo computeHitInfo(const Ray& ray, const MarchingOrders& marchingOrders, bool debug);
 
   __device__ glm::vec3 accumulateLightBounce(hitInfo hit, const MarchingOrders& marchingOrders, int depth);
   __device__ lightHitInfo computeLightHitInfo(const Ray& ray, const Light& light);
@@ -125,7 +128,7 @@ namespace raymarch {
 
   __global__ void initRayKernel(MarchingOrders marchingOrders);
 
-  
+  __global__ void updateHitBufferKernel(const MarchingOrders marchingOrders);
 
 #pragma endregion
   

@@ -246,7 +246,10 @@ int main()
 
   OctreeNode* device_octree;
   raymarch::Ray* device_rays;
+  raymarch::hitInfo* device_hits;
 
+
+  std::cout << "allocating GPU memory..." << std::endl;
 
   CUDA_CHECK_ERROR(cudaMalloc(&device_camera, sizeof(Camera)));
   CUDA_CHECK_ERROR(cudaMemcpy(device_camera, &host_camera, sizeof(Camera), cudaMemcpyHostToDevice));
@@ -280,14 +283,22 @@ int main()
   curandState* devStates;
   CUDA_CHECK_ERROR(cudaMalloc(&devStates, num_threads * sizeof(curandState)));
 
-  raymarch::initRandState << <gridSize, blockSize >> > (devStates, seed);
+ 
+  
+  CUDA_TIME_IT(raymarch::initRandState, gridSize, blockSize, "Random state init time", devStates, seed);
+
+
+
+
   CUDA_CHECK_ERROR(cudaDeviceSynchronize()); // Optional, for synchronization/debugging
 
   if (ENABLE_ANTI_ALIASING) {
     CUDA_CHECK_ERROR(cudaMalloc(&device_rays, sizeof(raymarch::Ray) * num_threads * SQRT_SAMPLE_PER_PIXEL * SQRT_SAMPLE_PER_PIXEL));
+    CUDA_CHECK_ERROR(cudaMalloc(&device_hits, sizeof(raymarch::hitInfo) * num_threads * SQRT_SAMPLE_PER_PIXEL * SQRT_SAMPLE_PER_PIXEL));
   }
   else {
     CUDA_CHECK_ERROR(cudaMalloc(&device_rays, sizeof(raymarch::Ray) * num_threads));
+    CUDA_CHECK_ERROR(cudaMalloc(&device_hits, sizeof(raymarch::hitInfo) * num_threads));
   }
 
 
@@ -306,13 +317,27 @@ int main()
   marchingOrders.sqrtSamplesPerPixel = SQRT_SAMPLE_PER_PIXEL;
   marchingOrders.height = SCENE_HEIGHT;
   marchingOrders.width = SCENE_WIDTH;
+  marchingOrders.hitBuffer = device_hits;
 
 
   cudaEvent_t start, stop;
+  cudaEvent_t pStart, pStop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
+  cudaEventCreate(&pStart);
+  float milliseconds = 0;
+  cudaEventCreate(&pStop);
 
-  raymarch::initRayKernel<<<gridSize, blockSize>>> (marchingOrders);
+  cudaEventRecord(start);
+
+
+  CUDA_TIME_IT(raymarch::initRayKernel,gridSize, blockSize ,"Ray init time", marchingOrders );
+
+
+
+
+  CUDA_TIME_IT(raymarch::updateHitBufferKernel, gridSize, blockSize, "HitBuffer init time", marchingOrders );
+
 
   // Render here
 
@@ -320,27 +345,19 @@ int main()
 
   CUDA_CHECK_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&devPtr, &size, cudaPixelBufferResource));
 
+  CUDA_TIME_IT(raymarch::computeRayMarchedColorsKernel, gridSize, blockSize, "Color computation time", devPtr, marchingOrders)
 
-
-  cudaEventRecord(start);
-
-  raymarch::computeRayMarchedColorsKernel<<<gridSize, blockSize>>> (
-    devPtr,
-    marchingOrders
-    );
-
-  CUDA_CHECK_ERROR(cudaDeviceSynchronize()); // Optional, for synchronization/debugging
+  CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
 
-  float milliseconds = 0;
   cudaEventElapsedTime(&milliseconds, start, stop);
   std::cout << "With Anti-Aliasing : " << (ENABLE_ANTI_ALIASING ? "yes": "no");
   if(ENABLE_ANTI_ALIASING) std::cout << "; SPP: " << (SQRT_SAMPLE_PER_PIXEL * SQRT_SAMPLE_PER_PIXEL);
   std::cout << "; O-DEPTH: " << MAX_OCTREE_DEPTH;  
   std::cout << "; Number of renderables: " << numberOfRenderables;  
-  std::cout << "; Kernel execution time: " << milliseconds << " milliseconds\n";
+  std::cout << "; Total execution time: " << milliseconds << " milliseconds\n";
 
 
   CUDA_CHECK_ERROR(cudaGraphicsUnmapResources(1, &cudaPixelBufferResource, 0));
@@ -365,9 +382,12 @@ int main()
   CUDA_CHECK_ERROR(cudaFree(devStates));
   CUDA_CHECK_ERROR(cudaFree(device_octree));
   CUDA_CHECK_ERROR(cudaFree(device_rays));
+  CUDA_CHECK_ERROR(cudaFree(device_hits));
   CUDA_CHECK_ERROR(cudaFree(device_lights));
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
+  cudaEventDestroy(pStart);
+  cudaEventDestroy(pStop);
 
 
   glfwDestroyWindow(params.window);
