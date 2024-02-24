@@ -130,6 +130,8 @@ namespace raymarch {
 
   __global__ void updateHitBufferKernel(const MarchingOrders marchingOrders);
 
+  __global__ void createDepthBufferKernel(unsigned char* depthBuffer, const MarchingOrders marchingOrders);
+
 #pragma endregion
   
 #pragma region OCTREE FUNCTIONS

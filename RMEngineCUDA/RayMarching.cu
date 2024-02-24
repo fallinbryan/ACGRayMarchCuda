@@ -217,6 +217,49 @@ __global__ void raymarch::updateHitBufferKernel(const MarchingOrders marchingOrd
 
 }
 
+__global__ void raymarch::createDepthBufferKernel(unsigned char* depthBuffer, const MarchingOrders marchingOrders)
+{
+  int x = threadIdx.x + blockIdx.x * blockDim.x;
+  int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+  float min = -10.0f;
+  float max = 10.0f;
+  float color = 0.0f;
+  hitInfo hit;
+
+  if (x >= marchingOrders.width || y >= marchingOrders.height) return;
+
+  int index = (x + y * marchingOrders.width) * 4; // Assuming 4 bytes per pixel (RGBA)
+  int rayId = (y * marchingOrders.width + x);
+  hit = marchingOrders.hitBuffer[rayId];
+  float depth = 0.0f;
+  if (marchingOrders.withAntiAliasing) {
+    for (int i = 0; i < marchingOrders.sqrtSamplesPerPixel; i++) {
+      for (int j = 0; j < marchingOrders.sqrtSamplesPerPixel; j++) {
+        int rayId = (y * marchingOrders.width + x) * marchingOrders.sqrtSamplesPerPixel * marchingOrders.sqrtSamplesPerPixel + i * marchingOrders.sqrtSamplesPerPixel + j;
+       
+        hit = marchingOrders.hitBuffer[rayId];
+        
+        depth += hit.hit ? hit.hitPoint.y : 0.0f;
+
+      }
+    }
+  depth = depth / (float)(marchingOrders.sqrtSamplesPerPixel * marchingOrders.sqrtSamplesPerPixel);
+  }
+  else {
+    depth = hit.hit ? hit.hitPoint.y : 0.0f;
+
+  }
+
+  color = depth == 0.0f ? 0.0f : (1.0f - raymarch::map(depth, min, max, 0.0f, 1.0f));
+  
+
+  depthBuffer[index] = color * 255;
+  depthBuffer[index + 1] = color * 255;
+  depthBuffer[index + 2] = color * 255;
+  depthBuffer[index + 3] = 255;
+}
+
 #pragma endregion
 
 #pragma region RAYMARCH DEVICE FUNCTIONS

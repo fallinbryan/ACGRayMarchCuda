@@ -37,8 +37,9 @@
 #define ENABLE_ANTI_ALIASING true
 #define RENDER_NORMALS false
 #define DEBUG_VIZUALIZE_OCTREE false
+#define RENDER_DEPTH false
 
-#define WITH_DOF true
+#define WITH_DOF false
 #define APERTURE 0.3f
 #define FOCAL_DISTANCE 10.05f
 
@@ -47,6 +48,22 @@
 
 #define RANDOM_MIN_RANGE 0.0f
 #define RANDOM_MAX_RANGE 5.0f
+
+#if RENDER_DEPTH
+
+    #undef ENABLE_ANTI_ALIASING
+    #define ENABLE_ANTI_ALIASING false
+    #undef RENDER_NORMALS
+    #define RENDER_NORMALS false
+    #undef WITH_DOF
+    #define WITH_DOF false
+    #undef ADD_RANDOM_SPHERES
+    #define ADD_RANDOM_SPHERES false
+    #undef SQRT_SAMPLE_PER_PIXEL
+    #define SQRT_SAMPLE_PER_PIXEL 1
+  
+#endif
+
 
 void debugTheBuffer(GLParams p);
 
@@ -73,6 +90,8 @@ __constant__ Camera camera;
 
 int main()
 {
+  //if (RENDER_DEPTH) {
+
 
   std::random_device rd;
   std::mt19937 g(rd());
@@ -318,6 +337,7 @@ int main()
   marchingOrders.height = SCENE_HEIGHT;
   marchingOrders.width = SCENE_WIDTH;
   marchingOrders.hitBuffer = device_hits;
+  marchingOrders.useDof = WITH_DOF;
 
 
   cudaEvent_t start, stop;
@@ -345,7 +365,14 @@ int main()
 
   CUDA_CHECK_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&devPtr, &size, cudaPixelBufferResource));
 
-  CUDA_TIME_IT(raymarch::computeRayMarchedColorsKernel, gridSize, blockSize, "Color computation time", devPtr, marchingOrders)
+  if (RENDER_DEPTH) {
+    CUDA_TIME_IT(raymarch::createDepthBufferKernel, gridSize, blockSize, "Color computation time", devPtr, marchingOrders);
+  }
+  else {
+    CUDA_TIME_IT(raymarch::computeRayMarchedColorsKernel, gridSize, blockSize, "Color computation time", devPtr, marchingOrders);
+
+  }
+
 
   CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
