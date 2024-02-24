@@ -5,6 +5,10 @@ ACGRayMarchCuda is a ray marching engine developed for Assignment 02 in the Adva
 
 ## Features
 
+### Shooting Multiple Rays per Pixel via a Stratified Jittering Approach
+Implements a stratified jittering approach for shooting multiple rays per pixel, enhancing image quality and realism by reducing aliasing and providing more accurate lighting and shadow effects.
+
+
 ### Parallel Processing on GPU using CUDA
 Utilizes NVIDIA CUDA technology for parallel processing on GPUs, enhancing the speed of ray marching calculations.
 
