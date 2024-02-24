@@ -25,6 +25,7 @@
 #include "RayMarching.cuh"
 #include "cutils.cuh"
 #include "Octree.h"
+#include "BlueprintDecoder.h"
 
 
 
@@ -49,7 +50,7 @@
 #define RANDOM_MIN_RANGE 0.0f
 #define RANDOM_MAX_RANGE 5.0f
 
-#if RENDER_DEPTH
+#if RENDER_DEPTH == true
 
     #undef ENABLE_ANTI_ALIASING
     #define ENABLE_ANTI_ALIASING false
@@ -91,118 +92,132 @@ __constant__ Camera camera;
 int main()
 {
   //if (RENDER_DEPTH) {
+  BlueprintDecoder *pdecoder;
+  try {
+    pdecoder = new BlueprintDecoder("Demo.scene", true);
+  }
+  catch (const std::exception& e) {
+    std::cout << e.what() << std::endl;
+    return -1;
+  }
+  
+  BlueprintDecoder& decoder = *pdecoder;
 
+
+  std::vector<raymarch::Renderable> host_scene = decoder.getRenderables();
+  std::vector<raymarch::Light> host_lights = decoder.getLights();
+  SceneSettings settings = decoder.getSettings();
 
   std::random_device rd;
   std::mt19937 g(rd());
   std::uniform_real_distribution<float> d(RANDOM_MIN_RANGE, RANDOM_MAX_RANGE);
 
   GLParams params;
-  params.width = SCENE_WIDTH;
-  params.height = SCENE_HEIGHT;
+  params.width = settings.width;
+  params.height = settings.height;
   cudaError_t error;
-  Camera host_camera;
+  Camera host_camera = decoder.getCamera();
   Camera* device_camera;
 
-  host_camera.position = glm::vec3(0, -10.0f, 0);
-  host_camera.up = glm::vec3(0, 0, 1);
-  host_camera.lookAt = glm::vec3(0, 0, 0);
-  host_camera.fov = 60.0f;
-  host_camera.aspect = (float)SCENE_WIDTH / (float)SCENE_HEIGHT;
-  host_camera.near = 0.1f;
-  host_camera.far = 100.0f;
-  host_camera.aperture = APERTURE;
-  host_camera.focalLength = FOCAL_DISTANCE;
+  //host_camera.position = glm::vec3(0, -10.0f, 0);
+  //host_camera.up = glm::vec3(0, 0, 1);
+  //host_camera.lookAt = glm::vec3(0, 0, 0);
+  //host_camera.fov = 60.0f;
+  //host_camera.aspect = (float)SCENE_WIDTH / (float)SCENE_HEIGHT;
+  //host_camera.near = 0.1f;
+  //host_camera.far = 100.0f;
+  //host_camera.aperture = APERTURE;
+  //host_camera.focalLength = FOCAL_DISTANCE;
 
-  size_t numberOfRenderables = 8;
-  std::vector<raymarch::Renderable> host_scene(numberOfRenderables);
+  //size_t numberOfRenderables = 8;
+  //std::vector<raymarch::Renderable> host_scene(numberOfRenderables);
  
   // Sphere 0 (Red Sphere - Large)
-  host_scene[0].type = raymarch::PrimitiveType::SPHERE;
-  host_scene[0].sphere.origin = glm::vec3(0.0f, 0.0f, -1.0f); // Centered at Z = -1
-  host_scene[0].sphere.radius = 1.0f; // Large radius
-  host_scene[0].color.r = 255;
-  host_scene[0].color.g = 0;
-  host_scene[0].color.b = 0;
-  host_scene[0].color.a = 255;
+  //host_scene[0].type = raymarch::PrimitiveType::SPHERE;
+  //host_scene[0].sphere.origin = glm::vec3(0.0f, 0.0f, -1.0f); // Centered at Z = -1
+  //host_scene[0].sphere.radius = 1.0f; // Large radius
+  //host_scene[0].color.r = 255;
+  //host_scene[0].color.g = 0;
+  //host_scene[0].color.b = 0;
+  //host_scene[0].color.a = 255;
 
-  // Sphere 1 (Green Sphere - Medium)
-  host_scene[1].type = raymarch::PrimitiveType::SPHERE;
-  host_scene[1].sphere.origin = glm::vec3(-3.0f, 3.0f, -1.25f); // Positioned for shadow casting
-  host_scene[1].sphere.radius = 0.75f; // Medium radius
-  host_scene[1].color.r = 0;
-  host_scene[1].color.g = 255;
-  host_scene[1].color.b = 0;
-  host_scene[1].color.a = 255;
+  //// Sphere 1 (Green Sphere - Medium)
+  //host_scene[1].type = raymarch::PrimitiveType::SPHERE;
+  //host_scene[1].sphere.origin = glm::vec3(-3.0f, 3.0f, -1.25f); // Positioned for shadow casting
+  //host_scene[1].sphere.radius = 0.75f; // Medium radius
+  //host_scene[1].color.r = 0;
+  //host_scene[1].color.g = 255;
+  //host_scene[1].color.b = 0;
+  //host_scene[1].color.a = 255;
 
-  // Sphere 2 (Blue Sphere - Small)
-  host_scene[2].type = raymarch::PrimitiveType::SPHERE;
-  host_scene[2].sphere.origin = glm::vec3(3.5f, -2.0f, -1.5f); // Positioned separately
-  host_scene[2].sphere.radius = 0.5f; // Small radius
-  host_scene[2].color.r = 0;
-  host_scene[2].color.g = 0;
-  host_scene[2].color.b = 255;
-  host_scene[2].color.a = 255;
-
-
+  //// Sphere 2 (Blue Sphere - Small)
+  //host_scene[2].type = raymarch::PrimitiveType::SPHERE;
+  //host_scene[2].sphere.origin = glm::vec3(3.5f, -2.0f, -1.5f); // Positioned separately
+  //host_scene[2].sphere.radius = 0.5f; // Small radius
+  //host_scene[2].color.r = 0;
+  //host_scene[2].color.g = 0;
+  //host_scene[2].color.b = 255;
+  //host_scene[2].color.a = 255;
 
 
-  // First Triangle, scaled by 5 and moved down to Z = -2
-  host_scene[4].type = raymarch::PrimitiveType::TRIANGLE;
-  host_scene[4].triangle.v0 = glm::vec3(5, -5,  -2); // Bottom Right, scaled and moved
-  host_scene[4].triangle.v1 = glm::vec3(-5, 5,  -2); // Top Left, scaled and moved
-  host_scene[4].triangle.v2 = glm::vec3(-5, -5, -2); // Bottom Left, scaled and moved
-  host_scene[4].color.r = 127;
-  host_scene[4].color.g = 127;
-  host_scene[4].color.b = 127;
-  host_scene[4].color.a = 255;
-
-  // Second Triangle, scaled by 5 and moved down to Z = -2
-  host_scene[5].type = raymarch::PrimitiveType::TRIANGLE;
-  host_scene[5].triangle.v0 = glm::vec3(5, -5, -2); // Bottom Right, scaled and moved
-  host_scene[5].triangle.v1 = glm::vec3(5, 5,  -2); // Top Right, scaled and moved
-  host_scene[5].triangle.v2 = glm::vec3(-5, 5, -2); // Top Left, scaled and moved
-  host_scene[5].color.r = 127;
-  host_scene[5].color.g = 127;
-  host_scene[5].color.b = 127;
-  host_scene[5].color.a = 255;
-
-  host_scene[6].type = raymarch::PrimitiveType::ROUNDBOX;
-  host_scene[6].roundBox.origin = glm::vec3(2, -1, -1.50);
-  host_scene[6].roundBox.halfExtents = glm::vec3(.25, .25, .25);
-  host_scene[6].roundBox.edgeWidth = 0.2f;
-  host_scene[6].color.r = 255;
-  host_scene[6].color.g = 0;
-  host_scene[6].color.b = 255;
-  host_scene[6].color.a = 255;
 
 
-  host_scene[7].type = raymarch::PrimitiveType::BOXFRAME;
-  host_scene[7].boxFrame.origin = glm::vec3(-3.3f, -2.5f, -1.0f);
-  host_scene[7].boxFrame.halfExtents = glm::vec3(0.75f, 1, 1);
-  host_scene[7].boxFrame.edgeWidth = 0.1f;
-  host_scene[7].color.r = 0;
-  host_scene[7].color.g = 255;
-  host_scene[7].color.b = 255;
-  host_scene[7].color.a = 255;
+  //// First Triangle, scaled by 5 and moved down to Z = -2
+  //host_scene[4].type = raymarch::PrimitiveType::TRIANGLE;
+  //host_scene[4].triangle.v0 = glm::vec3(5, -5,  -2); // Bottom Right, scaled and moved
+  //host_scene[4].triangle.v1 = glm::vec3(-5, 5,  -2); // Top Left, scaled and moved
+  //host_scene[4].triangle.v2 = glm::vec3(-5, -5, -2); // Bottom Left, scaled and moved
+  //host_scene[4].color.r = 127;
+  //host_scene[4].color.g = 127;
+  //host_scene[4].color.b = 127;
+  //host_scene[4].color.a = 255;
+
+  //// Second Triangle, scaled by 5 and moved down to Z = -2
+  //host_scene[5].type = raymarch::PrimitiveType::TRIANGLE;
+  //host_scene[5].triangle.v0 = glm::vec3(5, -5, -2); // Bottom Right, scaled and moved
+  //host_scene[5].triangle.v1 = glm::vec3(5, 5,  -2); // Top Right, scaled and moved
+  //host_scene[5].triangle.v2 = glm::vec3(-5, 5, -2); // Top Left, scaled and moved
+  //host_scene[5].color.r = 127;
+  //host_scene[5].color.g = 127;
+  //host_scene[5].color.b = 127;
+  //host_scene[5].color.a = 255;
+
+  //host_scene[6].type = raymarch::PrimitiveType::ROUNDBOX;
+  //host_scene[6].roundBox.origin = glm::vec3(2, -1, -1.50);
+  //host_scene[6].roundBox.halfExtents = glm::vec3(.25, .25, .25);
+  //host_scene[6].roundBox.edgeWidth = 0.2f;
+  //host_scene[6].color.r = 255;
+  //host_scene[6].color.g = 0;
+  //host_scene[6].color.b = 255;
+  //host_scene[6].color.a = 255;
+
+
+  //host_scene[7].type = raymarch::PrimitiveType::BOXFRAME;
+  //host_scene[7].boxFrame.origin = glm::vec3(-3.3f, -2.5f, -1.0f);
+  //host_scene[7].boxFrame.halfExtents = glm::vec3(0.75f, 1, 1);
+  //host_scene[7].boxFrame.edgeWidth = 0.1f;
+  //host_scene[7].color.r = 0;
+  //host_scene[7].color.g = 255;
+  //host_scene[7].color.b = 255;
+  //host_scene[7].color.a = 255;
 
 
 
   if (ADD_RANDOM_SPHERES) {
     debugPushRandomSpheresOnOneSideOfScreen(host_scene, d, g, 100);
-    numberOfRenderables += 100;
+    //numberOfRenderables += 100;
   }
 
 
-  std::vector<raymarch::Light> host_lights;
+  //std::vector<raymarch::Light> host_lights;
   raymarch::Light* device_lights;
 
-  raymarch::Light light;
-  light.type = raymarch::LightType::DIRECTIONAL;
-  light.color.r = 0.8f;
-  light.color.g = 0.8f;
-  light.color.b = 0.8f;
-  light.directionalLight.direction = glm::normalize(glm::vec3(1.0f , -1.0f, 0.5f));
+  //raymarch::Light light;
+  //light.type = raymarch::LightType::DIRECTIONAL;
+  //light.color.r = 0.8f;
+  //light.color.g = 0.8f;
+  //light.color.b = 0.8f;
+  //light.directionalLight.direction = glm::normalize(glm::vec3(1.0f , -1.0f, 0.5f));
 
 
   //light.type = raymarch::LightType::AREA_PLANE;
@@ -216,7 +231,7 @@ int main()
 
 
 
-  host_lights.push_back(light);
+  //host_lights.push_back(light);
 
   
 
@@ -251,7 +266,7 @@ int main()
       octreeNode.boxFrame.edgeWidth = 0.0075f;
       octreeNode.color = octreeColor;
       host_scene.push_back(octreeNode);
-      numberOfRenderables++;
+      //numberOfRenderables++;
     };
 
   }
@@ -273,8 +288,8 @@ int main()
   CUDA_CHECK_ERROR(cudaMalloc(&device_camera, sizeof(Camera)));
   CUDA_CHECK_ERROR(cudaMemcpy(device_camera, &host_camera, sizeof(Camera), cudaMemcpyHostToDevice));
 
-  CUDA_CHECK_ERROR(cudaMalloc(&device_scene, sizeof(raymarch::Renderable) * numberOfRenderables));
-  CUDA_CHECK_ERROR(cudaMemcpy(device_scene, host_scene.data(), sizeof(raymarch::Renderable) * numberOfRenderables, cudaMemcpyHostToDevice));
+  CUDA_CHECK_ERROR(cudaMalloc(&device_scene, sizeof(raymarch::Renderable) * host_scene.size()));
+  CUDA_CHECK_ERROR(cudaMemcpy(device_scene, host_scene.data(), sizeof(raymarch::Renderable) * host_scene.size(), cudaMemcpyHostToDevice));
 
   CUDA_CHECK_ERROR(cudaMalloc(&device_lights, sizeof(raymarch::Light) * host_lights.size()));
   CUDA_CHECK_ERROR(cudaMemcpy(device_lights, host_lights.data(), sizeof(raymarch::Renderable) * host_lights.size(), cudaMemcpyHostToDevice));
@@ -295,7 +310,7 @@ int main()
   size_t size;
 
   dim3 blockSize(16, 16); // A common choice, but adjust based on your needs and GPU architecture
-  dim3 gridSize((SCENE_WIDTH + blockSize.x - 1) / blockSize.x, (SCENE_HEIGHT + blockSize.y - 1) / blockSize.y);
+  dim3 gridSize((settings.width + blockSize.x - 1) / blockSize.x, (settings.height + blockSize.y - 1) / blockSize.y);
 
   size_t num_threads = blockSize.x * blockSize.y * blockSize.z * gridSize.x * gridSize.y * gridSize.z;
   size_t seed = 512;
@@ -312,8 +327,8 @@ int main()
   CUDA_CHECK_ERROR(cudaDeviceSynchronize()); // Optional, for synchronization/debugging
 
   if (ENABLE_ANTI_ALIASING) {
-    CUDA_CHECK_ERROR(cudaMalloc(&device_rays, sizeof(raymarch::Ray) * num_threads * SQRT_SAMPLE_PER_PIXEL * SQRT_SAMPLE_PER_PIXEL));
-    CUDA_CHECK_ERROR(cudaMalloc(&device_hits, sizeof(raymarch::hitInfo) * num_threads * SQRT_SAMPLE_PER_PIXEL * SQRT_SAMPLE_PER_PIXEL));
+    CUDA_CHECK_ERROR(cudaMalloc(&device_rays, sizeof(raymarch::Ray) * num_threads * settings.antiAliasingQuality * settings.antiAliasingQuality));
+    CUDA_CHECK_ERROR(cudaMalloc(&device_hits, sizeof(raymarch::hitInfo) * num_threads * settings.antiAliasingQuality * settings.antiAliasingQuality));
   }
   else {
     CUDA_CHECK_ERROR(cudaMalloc(&device_rays, sizeof(raymarch::Ray) * num_threads));
@@ -329,15 +344,15 @@ int main()
   marchingOrders.lightSize = host_lights.size();
   marchingOrders.octree = device_octree;
   marchingOrders.octreeSize = octree->size();
-  marchingOrders.sceneSize = numberOfRenderables;
+  marchingOrders.sceneSize = host_scene.size();
   marchingOrders.randState = devStates;
-  marchingOrders.withAntiAliasing = ENABLE_ANTI_ALIASING;
+  marchingOrders.withAntiAliasing = settings.enableAntiAliasing;
   marchingOrders.renderNormals = RENDER_NORMALS;
-  marchingOrders.sqrtSamplesPerPixel = SQRT_SAMPLE_PER_PIXEL;
-  marchingOrders.height = SCENE_HEIGHT;
-  marchingOrders.width = SCENE_WIDTH;
+  marchingOrders.sqrtSamplesPerPixel = settings.antiAliasingQuality;
+  marchingOrders.height = settings.height;
+  marchingOrders.width = settings.width;
   marchingOrders.hitBuffer = device_hits;
-  marchingOrders.useDof = WITH_DOF;
+  marchingOrders.useDof = settings.enableDoF;
 
 
   cudaEvent_t start, stop;
@@ -380,10 +395,10 @@ int main()
   cudaEventSynchronize(stop);
 
   cudaEventElapsedTime(&milliseconds, start, stop);
-  std::cout << "With Anti-Aliasing : " << (ENABLE_ANTI_ALIASING ? "yes": "no");
-  if(ENABLE_ANTI_ALIASING) std::cout << "; SPP: " << (SQRT_SAMPLE_PER_PIXEL * SQRT_SAMPLE_PER_PIXEL);
+  std::cout << "With Anti-Aliasing : " << (settings.enableAntiAliasing ? "yes": "no");
+  if(ENABLE_ANTI_ALIASING) std::cout << "; SPP: " << (settings.antiAliasingQuality * settings.antiAliasingQuality);
   std::cout << "; O-DEPTH: " << MAX_OCTREE_DEPTH;  
-  std::cout << "; Number of renderables: " << numberOfRenderables;  
+  std::cout << "; Number of renderables: " << host_scene.size();  
   std::cout << "; Total execution time: " << milliseconds << " milliseconds\n";
 
 
@@ -420,6 +435,7 @@ int main()
   glfwDestroyWindow(params.window);
   glfwTerminate(); // Cleanup and close the window once the loop is exited
   delete octree;
+  delete pdecoder;
 
   return 0;
 }

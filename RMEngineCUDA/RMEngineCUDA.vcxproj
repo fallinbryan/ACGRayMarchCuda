@@ -91,6 +91,7 @@
     <CudaCompile Include="RayMarching.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BlueprintDecoder.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="GLUtil.cpp" />
     <ClCompile Include="Octree.cpp" />
@@ -102,8 +103,10 @@
     <None Include="basicVertShader.glsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </None>
+    <None Include="Demo.scene" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BlueprintDecoder.h" />
     <ClInclude Include="Camera.cuh" />
     <ClInclude Include="cutils.cuh" />
     <ClInclude Include="GLUtil.h" />

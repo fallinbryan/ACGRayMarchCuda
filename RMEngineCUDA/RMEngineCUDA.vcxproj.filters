@@ -24,6 +24,9 @@
     <ClCompile Include="glad.c">
       <Filter>SourceFiles</Filter>
     </ClCompile>
+    <ClCompile Include="BlueprintDecoder.cpp">
+      <Filter>SourceFiles</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="basicFragShader.glsl">
@@ -32,6 +35,7 @@
     <None Include="basicVertShader.glsl">
       <Filter>ShaderFiles</Filter>
     </None>
+    <None Include="Demo.scene" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.cuh">
@@ -50,6 +54,9 @@
       <Filter>HeaderFiles</Filter>
     </ClInclude>
     <ClInclude Include="RayMarching.cuh">
+      <Filter>HeaderFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="BlueprintDecoder.h">
       <Filter>HeaderFiles</Filter>
     </ClInclude>
   </ItemGroup>

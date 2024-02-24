@@ -14,7 +14,6 @@ namespace raymarch {
   enum class PrimitiveType {
     SPHERE,
     TRIANGLE,
-    PLANE,
     BOX,
     DISC,
     ROUNDBOX,
@@ -31,7 +30,6 @@ namespace raymarch {
 
   struct DirectionalLight {
     glm::vec3 direction;
-    Color color;
   };
 
 struct PointLight {
@@ -94,11 +92,6 @@ struct AreaLightDisc {
     float radius;
   };
 
-  struct Plane {
-    glm::vec3 normal;
-    glm::vec3 point;
-  };
-
   struct Renderable {
     PrimitiveType type;
     union {
@@ -107,11 +100,9 @@ struct AreaLightDisc {
       RoundBox roundBox;
       BoxFrame boxFrame;
       Triangle triangle;
-      Plane plane;
       Disc disc;
     };
     Color color;
-    const char* name;
   };
 
   struct Light {
