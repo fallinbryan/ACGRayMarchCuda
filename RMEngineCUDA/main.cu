@@ -91,10 +91,10 @@ __constant__ Camera camera;
 
 int main()
 {
-  //if (RENDER_DEPTH) {
+  
   BlueprintDecoder *pdecoder;
   try {
-    pdecoder = new BlueprintDecoder("Demo.scene", true);
+    pdecoder = new BlueprintDecoder("Demo.scene", false);
   }
   catch (const std::exception& e) {
     std::cout << e.what() << std::endl;
@@ -119,124 +119,14 @@ int main()
   Camera host_camera = decoder.getCamera();
   Camera* device_camera;
 
-  //host_camera.position = glm::vec3(0, -10.0f, 0);
-  //host_camera.up = glm::vec3(0, 0, 1);
-  //host_camera.lookAt = glm::vec3(0, 0, 0);
-  //host_camera.fov = 60.0f;
-  //host_camera.aspect = (float)SCENE_WIDTH / (float)SCENE_HEIGHT;
-  //host_camera.near = 0.1f;
-  //host_camera.far = 100.0f;
-  //host_camera.aperture = APERTURE;
-  //host_camera.focalLength = FOCAL_DISTANCE;
-
-  //size_t numberOfRenderables = 8;
-  //std::vector<raymarch::Renderable> host_scene(numberOfRenderables);
- 
-  // Sphere 0 (Red Sphere - Large)
-  //host_scene[0].type = raymarch::PrimitiveType::SPHERE;
-  //host_scene[0].sphere.origin = glm::vec3(0.0f, 0.0f, -1.0f); // Centered at Z = -1
-  //host_scene[0].sphere.radius = 1.0f; // Large radius
-  //host_scene[0].color.r = 255;
-  //host_scene[0].color.g = 0;
-  //host_scene[0].color.b = 0;
-  //host_scene[0].color.a = 255;
-
-  //// Sphere 1 (Green Sphere - Medium)
-  //host_scene[1].type = raymarch::PrimitiveType::SPHERE;
-  //host_scene[1].sphere.origin = glm::vec3(-3.0f, 3.0f, -1.25f); // Positioned for shadow casting
-  //host_scene[1].sphere.radius = 0.75f; // Medium radius
-  //host_scene[1].color.r = 0;
-  //host_scene[1].color.g = 255;
-  //host_scene[1].color.b = 0;
-  //host_scene[1].color.a = 255;
-
-  //// Sphere 2 (Blue Sphere - Small)
-  //host_scene[2].type = raymarch::PrimitiveType::SPHERE;
-  //host_scene[2].sphere.origin = glm::vec3(3.5f, -2.0f, -1.5f); // Positioned separately
-  //host_scene[2].sphere.radius = 0.5f; // Small radius
-  //host_scene[2].color.r = 0;
-  //host_scene[2].color.g = 0;
-  //host_scene[2].color.b = 255;
-  //host_scene[2].color.a = 255;
-
-
-
-
-  //// First Triangle, scaled by 5 and moved down to Z = -2
-  //host_scene[4].type = raymarch::PrimitiveType::TRIANGLE;
-  //host_scene[4].triangle.v0 = glm::vec3(5, -5,  -2); // Bottom Right, scaled and moved
-  //host_scene[4].triangle.v1 = glm::vec3(-5, 5,  -2); // Top Left, scaled and moved
-  //host_scene[4].triangle.v2 = glm::vec3(-5, -5, -2); // Bottom Left, scaled and moved
-  //host_scene[4].color.r = 127;
-  //host_scene[4].color.g = 127;
-  //host_scene[4].color.b = 127;
-  //host_scene[4].color.a = 255;
-
-  //// Second Triangle, scaled by 5 and moved down to Z = -2
-  //host_scene[5].type = raymarch::PrimitiveType::TRIANGLE;
-  //host_scene[5].triangle.v0 = glm::vec3(5, -5, -2); // Bottom Right, scaled and moved
-  //host_scene[5].triangle.v1 = glm::vec3(5, 5,  -2); // Top Right, scaled and moved
-  //host_scene[5].triangle.v2 = glm::vec3(-5, 5, -2); // Top Left, scaled and moved
-  //host_scene[5].color.r = 127;
-  //host_scene[5].color.g = 127;
-  //host_scene[5].color.b = 127;
-  //host_scene[5].color.a = 255;
-
-  //host_scene[6].type = raymarch::PrimitiveType::ROUNDBOX;
-  //host_scene[6].roundBox.origin = glm::vec3(2, -1, -1.50);
-  //host_scene[6].roundBox.halfExtents = glm::vec3(.25, .25, .25);
-  //host_scene[6].roundBox.edgeWidth = 0.2f;
-  //host_scene[6].color.r = 255;
-  //host_scene[6].color.g = 0;
-  //host_scene[6].color.b = 255;
-  //host_scene[6].color.a = 255;
-
-
-  //host_scene[7].type = raymarch::PrimitiveType::BOXFRAME;
-  //host_scene[7].boxFrame.origin = glm::vec3(-3.3f, -2.5f, -1.0f);
-  //host_scene[7].boxFrame.halfExtents = glm::vec3(0.75f, 1, 1);
-  //host_scene[7].boxFrame.edgeWidth = 0.1f;
-  //host_scene[7].color.r = 0;
-  //host_scene[7].color.g = 255;
-  //host_scene[7].color.b = 255;
-  //host_scene[7].color.a = 255;
-
-
 
   if (ADD_RANDOM_SPHERES) {
     debugPushRandomSpheresOnOneSideOfScreen(host_scene, d, g, 100);
     //numberOfRenderables += 100;
   }
 
-
-  //std::vector<raymarch::Light> host_lights;
   raymarch::Light* device_lights;
-
-  //raymarch::Light light;
-  //light.type = raymarch::LightType::DIRECTIONAL;
-  //light.color.r = 0.8f;
-  //light.color.g = 0.8f;
-  //light.color.b = 0.8f;
-  //light.directionalLight.direction = glm::normalize(glm::vec3(1.0f , -1.0f, 0.5f));
-
-
-  //light.type = raymarch::LightType::AREA_PLANE;
-  //light.color.r = 255;
-  //light.color.g = 255;
-  //light.color.b = 255;
-  //light.areaLightPlane.origin = glm::vec3(0, 0, -2.0);
-  //light.areaLightPlane.normal = glm::normalize(glm::vec3(0, 0, -1));
-  //light.areaLightPlane.u = glm::vec3(2, 0, 0);
-  //light.areaLightPlane.v = glm::vec3(0, 2, 0);
-
-
-
-  //host_lights.push_back(light);
-
   
-
-
-
   Octree* octree = nullptr;
 
   try {
