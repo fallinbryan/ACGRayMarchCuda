@@ -29,6 +29,41 @@ namespace raymarch {
     AREA_DISC
   };
 
+  enum class MaterialType {
+    LAMBERTIAN,
+    METAL,
+    DIELECTRIC,
+    EMISSIVE
+  };
+
+ struct Lambertian {
+    Color albedo;
+  };
+
+struct Metal {
+    Color albedo;
+    float fuzz;
+  };
+
+struct Dielectric {
+    float refractionIndex;
+  };
+
+struct Emissive {
+    Color color;
+    float intensity;
+  };
+
+  struct Material {
+    MaterialType type;
+    union {
+      Lambertian lambertian;
+      Metal metal;
+      Dielectric dielectric;
+      Emissive emissive;
+    };
+  };
+
   struct DirectionalLight {
     glm::vec3 direction;
     Color color;
@@ -101,6 +136,7 @@ struct AreaLightDisc {
 
   struct Renderable {
     PrimitiveType type;
+    Material material;
     union {
       Sphere sphere;
       Box box;
@@ -110,8 +146,8 @@ struct AreaLightDisc {
       Plane plane;
       Disc disc;
     };
-    Color color;
-    const char* name;
+    
+    
   };
 
   struct Light {
